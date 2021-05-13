@@ -1,0 +1,98 @@
+export PATH="/home/kafka/kafka/bin:$PATH"
+
+zookeeper-server-start.sh /home/kafka/kafka/config/zookeeper.properties
+kafka-server-start.sh /home/kafka/kafka/config/server.properties
+
+kafka-topics.sh --create --bootstrap-server localhost:9092 --topic inventory_purchases --partitions 1 --replication-factor 1 --config max.messagese.bytes=64000
+
+# kafka producer
+kafka-console-producer.sh --broker-list localhost:9092 --topic inventory_purchases --property "parse.key=true" --property "key.separator=:"
+kafka-console-producer.sh --broker-list my-cluster-kafka-brokers-myproject.192.168.1.16.nip.io:443 --topic inventory_purchases --property "parse.key=true" --property "key.separator=:"
+
+# kafka consumer
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic total_purchases
+kafka-console-consumer.sh --bootstrap-server my-cluster-kafka-brokers-myproject.192.168.1.16.nip.io:443
+# kafka consumer with deserializer
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic total_purchases --from-beginning --property print.key=true --property value.deserializer=org.apache.kafka.common.serialization.IntegerDeserializer
+
+# consumer group
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inventory_purchases --group 1 > /home/danan/kafka_lab/output/group1_consumer1.txt
+
+# broker configuration
+kafka-config.sh --bootstrap-server localhost:9092 --entity-type brokers --entity-name 1 --describe
+kafka-config.sh --bootstrap-server localhost:9092 --entity-type brokers --entity-name 1 --alter --add-config log.cleaner.threads=2
+
+# topic configurations
+kafka-config.sh --bootstrap-server localhost:9092 --entity-type configure-topics --alter --add-config max.messagese.bytes=65000
+
+# client configuration
+
+how many consumer do you want to place in a consumer group for parallel processing?
+You will need at least as many partitions as the number of consumers tou expect to have on a single group
+
+How much memory is available on each broker?
+Kafka requires memory to process messages. The configuration setting replica.fetch.max.bytes determines the rough amount of memory tou will need for each partition
+on a broker
+
+Metrics JMX Jconsole
+MBeans --> kafka.server --> brokerTopicMetrics --> MessagesInpersec
+# try Jconsole with Ubuntu server wsl
+
+#Enable unclean leader election to keep HA
+kafka-config.sh --zookeeper localhost:2181 --entity-type topics --entity-name inventory_purchases --alter --add-config unclean.leader.election.enable=true
+
+#Set the default retention period for the cluster default	
+kafka-config.sh --bootstrap-server localhost:9092 --entity-type brokers --entity-default --alter --add-config log.retention.ms=259200000
+
+#Set the retention period for the topic
+kafka-config.sh --zookeeper localhost:2181 --entity-type topics --entity-name inventory_purchases --alter --add-config retention.ms=259200000
+
+#Print consumer topic
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic inventory_purchases --property print.key=true --from-beginning
+
+# Producer in JAVA
+send(record, (RecordMetadata metada, Exception e) -> { some logic here });
+producer.close();
+
+# Consumer in JAVA
+Arrays.asList("test_topic1", "test_topic2")
+consumer.poll(Duration.ofMillis(100));
+consumer.commitSync();
+
+#REST Proxy
+confluent-schema-registry
+confluent-kafka-rest
+"Content-Type: application/vnd.kafka.v2+json"
+
+#schema registry
+sudo systemctl status confluent-schema-registry
+represented in JSON format
+Avro plugin autogenerate the class starting from schema definition file
+props.put(ProducerConfig. VALUE_SERIALIZER_CLASS_CONFIG, KafkaAvroSerializer.class)
+for the consumer (KafkaAvroDeserializerConfig.SPEFIC_AVRO_READER_CONFIG, true)
+Compatibility Type for the schema 3 kinds
+
+#Kafka Connect
+Source Connector --> inbound
+Sink Connector --> outbound
+#EX Sink
+1) Create a topic
+2) Create file for output and give 777
+3) Create connector
+    POST /connectors
+	"connector.class": "org.apache.kafka.connect.file.FileStreamSinkConnector",
+	"tasks.max": "1",
+	"file": "<file path>",
+	"topics": "<topic>",
+	"key.converter": "<key converter>", --> org.apache.kafka.connect.storage.StringConverter
+	"value.converter": "<value converter>"
+	
+#TLS Encryption
+Create the certificate with openssl
+Create the client.trustore.jks with keytool
+Create the server.trustore.jks with keytool
+Create the keystore for each brokers with san=dns:zooX,dns=x.x.x.
+Request the sign certificate for each broker based on prev keystore with keytool
+
+
+
